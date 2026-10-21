@@ -95,7 +95,7 @@ details summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--muted)
 <div class="app">
   <header>
     <div class="brand">FLIP<b>♡</b>STUDIO</div>
-    <div class="tag">크롬 폴더폰을 꾸미고, 문자가 오는 포스터를 영상과 gif로 저장해요</div>
+    <div class="tag">크롬 폴더폰을 꾸미고, 도트 문자가 띵띵 오는 포스터를 움짤로 저장해요</div>
   </header>
   <div class="main">
     <div class="stage">
@@ -177,6 +177,7 @@ details summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--muted)
           <h2>폰 앞면 스티커</h2>
           <button class="pinkb" id="btnEdit" aria-pressed="false">스티커 붙이기 시작</button>
           <div class="stk" id="stkPal" role="group" aria-label="스티커 고르기"></div>
+          <div class="row"><label class="up" for="stkFile">＋ 사진으로 스티커 만들기<input type="file" id="stkFile" accept="image/*"></label></div>
           <div class="small" id="stkHelp">스티커를 고르고 닫힌 폰 앞면을 탭하면 붙어요. 붙인 스티커는 끌어서 옮길 수 있어요. 작은 화면과 카메라 위에는 붙지 않아요.</div>
         </div>
         <div class="sec">
@@ -203,7 +204,7 @@ details summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--muted)
             <img class="thumb" id="keyThumb" alt="키링 사진" hidden>
             <button class="small" id="btnKeyClear" hidden>예시 십자가로</button>
           </div>
-          <span class="hint">배경이 투명한 PNG나 단색 배경 사진이면 윤곽대로 잘려요</span>
+          <span class="hint">사진을 자르지 않고 그대로 넣어요. 배경이 투명한 PNG만 그 모양대로 아크릴이 잘려요</span>
         </div>
         <div class="sec">
           <h2>비즈 스트랩</h2>
@@ -329,11 +330,11 @@ const STRAPS = {
   ocean:{name:'블루 스타', seq:['ms','g:#2a72ff','star:#4f97ff','ms','crystal:#1a55db','tube:#6db9ff','ms','star:chrome','g:#38a9ff','ms','cube:#2264ea','heart']},
   gothic:{name:'블랙 고딕', seq:['ms','g:#141419','crystal:#26262f','ms','cross','ms','g:#141419','m','crystal:#7a0f33','ms','cross','g:#22222a']}
 };
-const KEYSHAPES = {cut:'사진 모양대로 컷', rect:'사진 비율 사각'};
+const KEYSHAPES = {alpha:'사진 그대로', rect:'사각 카드형'};
 const FINISHES = {gloss:'유광', metal:'메탈'};
 const CORDS = {black:['블랙','#26262e'], white:['화이트','#f4f2f8'], pink:['핑크','#ff9cc6'], blue:['블루','#8db6ff'], lilac:['라일락','#c3a8ff']};
 
-const st = {theme:'blue', body:'black', finish:'gloss', lcd:'silver', wall:'plain', strap:'gothic', keyShape:'cut', cord:'black',
+const st = {theme:'blue', body:'black', finish:'gloss', lcd:'silver', wall:'plain', strap:'gothic', keyShape:'alpha', cord:'black',
   strapOn:true, keyOn:true, clock:$('inClock').value, winTitle:$('inWinTitle').value, date:$('inDate').value, sound:true, loop:true, letters:$('inLetters').value,
   sender:$('inSender').value, msg:$('inMsg').value, caption:$('inCaption').value,
   title:$('inTitle').value, script:$('inScript').value, copy:$('inCopy').value, chat:$('inChat').value};
@@ -754,6 +755,7 @@ const SG={
   pearl:new THREE.SphereGeometry(1,24,16)
 };
 const STK={
+  photo:{name:'사진 스티커',r:.26},
   heart:{name:'하트',r:.2}, star:{name:'별',r:.2}, moon:{name:'달',r:.15}, sparkle:{name:'반짝 별',r:.18},
   clover:{name:'클로버',r:.19}, blob:{name:'젤리 방울',r:.15}, butterfly:{name:'나비',r:.2}, bow:{name:'리본',r:.2},
   gem:{name:'큐빅',r:.06}, flower:{name:'큐빅 꽃',r:.13}, pearl:{name:'진주',r:.07}, ministar:{name:'작은 별',r:.11}
@@ -764,9 +766,11 @@ const SCOL={
   jpink:{name:'젤리 핑크',kind:'jelly',hex:'#ff8fc6'}, jblue:{name:'젤리 블루',kind:'jelly',hex:'#8fbcff'}, jlilac:{name:'젤리 라일락',kind:'jelly',hex:'#bf9bff'},
   jmint:{name:'젤리 민트',kind:'jelly',hex:'#7fe3b2'}, clear:{name:'클리어',kind:'jelly',hex:'#ffffff'}
 };
-const DEF_COL={heart:'silver',star:'aurora',moon:'silver',sparkle:'silver',clover:'jpink',blob:'jblue',butterfly:'jlilac',bow:'pinkc',gem:'clear',flower:'clear',pearl:'clear',ministar:'aurora'};
+const DEF_COL={photo:'silver',heart:'silver',star:'aurora',moon:'silver',sparkle:'silver',clover:'jpink',blob:'jblue',butterfly:'jlilac',bow:'pinkc',gem:'clear',flower:'clear',pearl:'clear',ministar:'aurora'};
 const CHROME_ONLY={heart:1};
-const colAllowed=(t,k)=>!!SCOL[k]&&(!CHROME_ONLY[t]||SCOL[k].kind==='chrome');
+const colAllowed=(t,k)=>t==='photo'?k==='silver':(!!SCOL[k]&&(!CHROME_ONLY[t]||SCOL[k].kind==='chrome'));
+const photoTex=new Map(), stkPaper=new THREE.MeshPhysicalMaterial({color:'#ffffff',roughness:.35,clearcoat:.6,envMapIntensity:.6});
+function getPhotoTex(src){ if(!photoTex.has(src)){ const t=new THREE.TextureLoader().load(src); t.encoding=THREE.sRGBEncoding; t.anisotropy=4; photoTex.set(src,t); } return photoTex.get(src); }
 const matCache={};
 function sMat(cKey,t){
   const c=SCOL[cKey]||SCOL.silver;
@@ -780,7 +784,12 @@ function sMat(cKey,t){
   else m=phys({color:c.hex==='#ffffff'?'#fffaf6':c.hex,metalness:.15,roughness:.22,clearcoat:1,clearcoatRoughness:.1,envMapIntensity:1.1});
   return matCache[key]=m;
 }
-function stickerObj(t,cKey){
+function stickerObj(t,cKey,item){
+  if(t==='photo'){ const g=new THREE.Group(), ar=(item&&item.ar)||1, w=ar>=1?1.9:1.9*ar, h=ar>=1?1.9/ar:1.9, alpha=!!(item&&item.alpha);
+    if(!alpha){ g.add(new THREE.Mesh(new THREE.ShapeGeometry(rr(w+.18,h+.18,.14)),stkPaper)); }
+    const ph=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:getPhotoTex(item.src),transparent:alpha,alphaTest:alpha?.4:0,toneMapped:false})); ph.position.z=.03; g.add(ph);
+    if(!alpha){ const gl=new THREE.Mesh(new THREE.ShapeGeometry(rr(w+.18,h+.18,.14)),M.glass); gl.position.z=.06; g.add(gl); }
+    return g; }
   const m=sMat(cKey,t);
   if(t==='flower'){ const g=new THREE.Group(), c=new THREE.Mesh(SG.gem,sMat('clear','gem')); c.scale.setScalar(.38); g.add(c);
     for(let i=0;i<6;i++){ const a=i/6*Math.PI*2, p=new THREE.Mesh(SG.gem,m); p.scale.setScalar(.25); p.position.set(Math.cos(a)*.68,Math.sin(a)*.68,0); g.add(p); } return g; }
@@ -807,7 +816,7 @@ const selRing=new THREE.Mesh(new THREE.TorusGeometry(1,.06,8,48),new THREE.MeshB
 function applyStickerTransform(s){ const r=STK[s.t].r*s.s; s.obj.scale.setScalar(r); if(s.t==='pearl') s.obj.scale.z=r*.7; s.obj.position.set(s.x,s.y,0); s.obj.rotation.z=s.rot; }
 function rebuildStickers(){
   for(const ch of [...stickers.children]) if(ch!==selRing) stickers.remove(ch);
-  stkList.forEach((s,i)=>{ if(!colAllowed(s.t,s.c)) s.c=DEF_COL[s.t]; const o=stickerObj(s.t,s.c); o.traverse(c=>c.userData.sid=i); s.obj=o; applyStickerTransform(s); stickers.add(o); });
+  stkList.forEach((s,i)=>{ if(!colAllowed(s.t,s.c)) s.c=DEF_COL[s.t]; const o=stickerObj(s.t,s.c,s); o.traverse(c=>c.userData.sid=i); s.obj=o; applyStickerTransform(s); stickers.add(o); });
   updateSel(); saveLater();
 }
 function updateSticker(i){ const s=stkList[i]; if(!s||!s.obj) return; applyStickerTransform(s); saveLater(); }
@@ -896,19 +905,6 @@ function maskFromImage(img,forceRect){
   if(!forceRect){
     let tr=0; for(let i=0;i<n;i++) if(d[i*4+3]<128) tr++;
     if(tr>n*.02){ for(let i=0;i<n;i++) m[i]=d[i*4+3]>=128?1:0; mode='alpha'; }
-    else {
-      const bidx=[]; for(let x=0;x<gw;x++) bidx.push(x,(gh-1)*gw+x); for(let y=1;y<gh-1;y++) bidx.push(y*gw,y*gw+gw-1);
-      let mr=0,mg=0,mb=0; bidx.forEach(i=>{ mr+=d[i*4]; mg+=d[i*4+1]; mb+=d[i*4+2]; }); mr/=bidx.length; mg/=bidx.length; mb/=bidx.length;
-      const dist=i=>Math.hypot(d[i*4]-mr,d[i*4+1]-mg,d[i*4+2]-mb);
-      let dev=0; bidx.forEach(i=>dev+=dist(i)); dev/=bidx.length;
-      if(dev<38){
-        const tol=Math.max(44,dev*2.4), bg=new Uint8Array(n), q=[];
-        bidx.forEach(i=>{ if(!bg[i]&&dist(i)<tol){ bg[i]=1; q.push(i); } });
-        while(q.length){ const i=q.pop(), x=i%gw, y=(i/gw)|0; for(const [dx,dy] of N4){ const xx=x+dx, yy=y+dy; if(xx<0||yy<0||xx>=gw||yy>=gh) continue; const j=yy*gw+xx; if(!bg[j]&&dist(j)<tol){ bg[j]=1; q.push(j); } } }
-        let fg=0; for(let i=0;i<n;i++){ m[i]=bg[i]?0:1; fg+=m[i]; }
-        if(fg>n*.06&&fg<n*.96) mode='key';
-      }
-    }
     if(mode!=='rect'){ const r=keepLargestFilled(m,gw,gh); if(r.n<n*.03) mode='rect'; else m=r.m; }
   }
   if(mode==='rect'){ const r=Math.round(Math.min(gw,gh)*.07);
@@ -1328,7 +1324,7 @@ wrap.addEventListener('pointerdown',e=>{
   if(armed&&p){
     if(stkList.length>=40){ toast('스티커는 40개까지 붙일 수 있어요'); return; }
     if(!validSpot(p.x,p.y,STK[armed].r)){ toast(sdFace(p.x,p.y)>-STK[armed].r*.6?'폰 앞면 안쪽에만 붙일 수 있어요':'화면과 카메라 위에는 붙일 수 없어요'); return; }
-    stkList.push({t:armed,c:(curCol&&colAllowed(armed,curCol))?curCol:DEF_COL[armed],x:p.x,y:p.y,rot:(hash2(simT*100,stkList.length)-.5)*.6,s:1}); rebuildStickers(); select(stkList.length-1); drag.sid=selId; drag.off={x:0,y:0}; pop();
+    stkList.push({...(armed==='photo'&&pendingPhoto?pendingPhoto:{}),t:armed,c:(curCol&&colAllowed(armed,curCol))?curCol:DEF_COL[armed],x:p.x,y:p.y,rot:(hash2(simT*100,stkList.length)-.5)*.6,s:1}); rebuildStickers(); select(stkList.length-1); drag.sid=selId; drag.off={x:0,y:0}; pop();
   } else if(!armed) { select(-1); toast('아래 목록에서 스티커를 먼저 골라 주세요'); }
 });
 wrap.addEventListener('pointermove',e=>{
@@ -1356,7 +1352,8 @@ const ICONS={
 };
 const DEFS='<defs><linearGradient id="ch" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#c9cde0"/><stop offset=".55" stop-color="#7d839f"/><stop offset="1" stop-color="#eef0f8"/></linearGradient><linearGradient id="iri" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#cfe4ff"/><stop offset=".5" stop-color="#e2d0ff"/><stop offset="1" stop-color="#ffc9e6"/></linearGradient><radialGradient id="pe" cx=".35" cy=".35"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#f1e2e8"/></radialGradient></defs>';
 const pal=$('stkPal');
-Object.keys(STK).forEach(k=>{ const b=document.createElement('button'); b.type='button'; b.setAttribute('aria-pressed','false'); b.setAttribute('aria-label',STK[k].name); b.title=STK[k].name;
+let pendingPhoto=null;
+Object.keys(STK).filter(k=>k!=='photo').forEach(k=>{ const b=document.createElement('button'); b.type='button'; b.setAttribute('aria-pressed','false'); b.setAttribute('aria-label',STK[k].name); b.title=STK[k].name;
   b.innerHTML=`<svg viewBox="0 0 100 100" aria-hidden="true">${DEFS}${ICONS[k]}</svg>`;
   b.addEventListener('click',()=>{ if(!editMode) setEdit(true); armed=armed===k?null:k; [...pal.children].forEach(c=>c.setAttribute('aria-pressed',String(c===b&&armed===k))); if(armed){ select(-1); toast(STK[k].name+' · 폰 앞면을 탭하세요'); } refreshColUI(); });
   pal.append(b); });
@@ -1369,9 +1366,17 @@ function refreshColUI(){
 Object.entries(SCOL).forEach(([k,v])=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.dataset.k=k;
   const i=document.createElement('i'); i.style.background=colSwatch(v); b.append(i,v.name);
   b.addEventListener('click',()=>{ const s=stkList[selId], t=s?s.t:armed;
-    if(t&&!colAllowed(t,k)){ toast('하트는 크롬 컬러만 쓸 수 있어요'); return; }
+    if(t&&!colAllowed(t,k)){ toast(t==='photo'?'사진 스티커는 컬러를 바꿀 수 없어요':'하트는 크롬 컬러만 쓸 수 있어요'); return; }
     curCol=k; if(s){ s.c=k; rebuildStickers(); } refreshColUI(); });
   stkColsEl.append(b); });
+$('stkFile').addEventListener('change',e=>loadImageFile(e.target.files[0],360,c=>{
+  e.target.value='';
+  const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data; let tr=0; for(let i=3;i<d.length;i+=4) if(d[i]<128) tr++;
+  const alpha=tr>c.width*c.height*.02;
+  pendingPhoto={src:alpha?c.toDataURL('image/png'):c.toDataURL('image/jpeg',.88),ar:c.width/c.height,alpha};
+  if(!editMode) setEdit(true); armed='photo'; select(-1); [...pal.children].forEach(b=>b.setAttribute('aria-pressed','false')); refreshColUI();
+  toast('폰 앞면을 탭하면 사진 스티커가 붙어요');
+}));
 function setEdit(v){
   editMode=v; $('btnEdit').setAttribute('aria-pressed',String(v)); $('btnEdit').textContent=v?'스티커 붙이기 끝내기':'스티커 붙이기 시작';
   $('editBadge').hidden=!v; wrap.classList.toggle('edit',v);
@@ -1476,7 +1481,7 @@ $('btnMp4').addEventListener('click',()=>{
 let saveTimer=0;
 const SKEY='fs4.state';
 function saveLater(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>{
-  try{ localStorage.setItem(SKEY,JSON.stringify({st,stk:stkList.map(({t,c,x,y,rot,s})=>({t,c,x,y,rot,s}))})); }catch(e){}
+  try{ localStorage.setItem(SKEY,JSON.stringify({st,stk:stkList.map(({t,c,x,y,rot,s,src,ar,alpha})=>({t,c,x,y,rot,s,src,ar,alpha}))})); }catch(e){}
   const put=(k,img,type,q)=>{ try{ if(img) localStorage.setItem(k,img.toDataURL(type,q)); else localStorage.removeItem(k); }catch(e){} };
   put('fs4.wall',wallImg,'image/jpeg',.82); put('fs4.key',keyImg,'image/png'); put('fs4.play',playImg,'image/jpeg',.85); },400); }
 function chips(el,entries,cur,on,swatch){ el.innerHTML=''; entries.forEach(([k,label])=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.setAttribute('aria-pressed',String(k===cur()));
@@ -1539,8 +1544,8 @@ function restore(){
   stkList=[];
   try{ const raw=localStorage.getItem(SKEY); if(raw){ const d=JSON.parse(raw);
     if(d&&d.st) for(const k in st) if(k in d.st&&typeof d.st[k]===typeof st[k]) st[k]=d.st[k];
-    if(d&&Array.isArray(d.stk)) stkList=d.stk.filter(s=>s&&STK[s.t]&&isFinite(s.x)&&isFinite(s.y)).map(s=>({...s,c:colAllowed(s.t,s.c)?s.c:DEF_COL[s.t]})); } }catch(e){}
-  if(!THEMES[st.theme]) st.theme='blue'; if(!BODIES[st.body]) st.body='black'; if(!LCDS[st.lcd]) st.lcd='silver'; if(!WALLS[st.wall]) st.wall='plain'; if(!STRAPS[st.strap]) st.strap='gothic'; if(!KEYSHAPES[st.keyShape]) st.keyShape='cut'; if(!FINISHES[st.finish]) st.finish='gloss'; if(!CORDS[st.cord]) st.cord='black';
+    if(d&&Array.isArray(d.stk)) stkList=d.stk.filter(s=>s&&STK[s.t]&&isFinite(s.x)&&isFinite(s.y)&&(s.t!=='photo'||s.src)).map(s=>({...s,c:colAllowed(s.t,s.c)?s.c:DEF_COL[s.t]})); } }catch(e){}
+  if(!THEMES[st.theme]) st.theme='blue'; if(!BODIES[st.body]) st.body='black'; if(!LCDS[st.lcd]) st.lcd='silver'; if(!WALLS[st.wall]) st.wall='plain'; if(!STRAPS[st.strap]) st.strap='gothic'; if(!KEYSHAPES[st.keyShape]) st.keyShape='alpha'; if(!FINISHES[st.finish]) st.finish='gloss'; if(!CORDS[st.cord]) st.cord='black';
   syncInputs();
   const imgFrom=(key,cb)=>{ try{ const u=localStorage.getItem(key); if(!u) return false; const im=new Image(); im.onload=()=>{ const c=mk(im.width,im.height); c.getContext('2d').drawImage(im,0,0); cb(c,u); }; im.src=u; return true; }catch(e){ return false; } };
   const hasWall=imgFrom('fs4.wall',(c,u)=>setWall(c,u));
